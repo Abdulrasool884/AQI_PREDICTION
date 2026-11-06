@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AQI Monitor | Air Quality Prediction</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <main class="site-layout">
+    <header class="site-header">
+      <a class="brand" href="{{ url_for('home') }}" aria-label="AQI Monitor home">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span><strong>Airwise</strong><small>INDIA AIR QUALITY</small></span>
+      </a>
+      <nav class="header-nav" aria-label="Page sections">
+        <a href="#live-search">Live estimate</a>
+        <a href="#manual-entry">Manual estimate</a>
+      </nav>
+      <span class="project-tag"><span class="status-dot"></span> ML project</span>
+    </header>
+
+    <section class="hero-panel">
+      <div class="hero-copy">
+        <p class="kicker"><span class="kicker-line"></span> AIR QUALITY MONITORING</p>
+        <h1>Welcome to AQI Monitor</h1>
+        <p class="hero-description">Discover air quality around you</p>
+        <div class="hero-actions">
+          <button id="use-current-location" class="button button-light" type="button">Detect My Location <span aria-hidden="true">&#8594;</span></button>
+          <a class="hero-secondary" href="#live-search">Search by city, town, or village</a>
+        </div>
+        <p id="geolocation-message" class="geolocation-message" role="status" aria-live="polite">Your location is only used when you choose to share it.</p>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="art-orbit orbit-outer"></div>
+        <div class="art-orbit orbit-inner"></div>
+        <div class="art-core">
+          <svg viewBox="0 0 120 120" role="presentation">
+            <path d="M60 92V49M60 68C39 67 30 55 29 37c19 0 31 8 31 27ZM60 58c2-19 14-30 33-31 0 18-10 31-33 35ZM41 92h38" />
+            <path d="M17 77c5 4 10 4 15 0M87 78c5 4 10 4 15 0M24 91c4 3 8 3 12 0M84 91c4 3 8 3 12 0" />
+          </svg>
+        </div>
+        <span class="art-label label-top">CLEANER INSIGHTS</span>
+        <span class="art-label label-bottom">POLLUTANT DATA ? INDIA</span>
+      </div>
+      <div class="hero-footnote"><span class="hero-footnote-line"></span> DATA-LED ENVIRONMENTAL INSIGHTS</div>
+    </section>
+
+    {% if error %}<div class="alert" role="alert"><span class="alert-icon">!</span>{{ error }}</div>{% endif %}
+
+    {% if location_results %}
+    <section class="location-results" aria-labelledby="location-results-title">
+      <div class="section-heading compact-heading">
+        <div><p class="section-overline">LOCATION SEARCH</p><h2 id="location-results-title">Choose a matching place</h2></div>
+        <span class="results-query">{{ search_query }}</span>
+      </div>
+      <p class="section-copy">Select the right city, town, or village to continue.</p>
+      <div class="location-options">
+        {% for place in location_results %}
+        <form method="post" action="{{ url_for('live_predict') }}" class="location-option">
+          <input type="hidden" name="location_choice" value="selected">
+          <input type="hidden" name="latitude" value="{{ place.latitude }}">
+          <input type="hidden" name="longitude" value="{{ place.longitude }}">
+          <input type="hidden" name="selected_city" value="{{ place.name }}">
+          <input type="hidden" name="selected_label" value="{{ place.display_name }}">
+          <div class="location-option-copy">
+            <span class="pin-mark" aria-hidden="true">&#9679;</span>
+            <div><strong>{{ place.display_name }}</strong><span>{{ "%.5f"|format(place.latitude) }}, {{ "%.5f"|format(place.longitude) }}</span></div>
+          </div>
+          <button class="button button-outline" type="submit">Select location <span aria-hidden="true">&#8594;</span></button>
+        </form>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="live-card" id="live-search">
+      <div class="live-card-heading">
+        <div>
+          <p class="section-overline light-overline"><span class="status-dot"></span> LIVE AIR QUALITY</p>
+          <h2>Find a location</h2>
+          <p>Search by place name or use precise coordinates.</p>
+        </div>
+        <div class="live-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M24 42s14-13.2 14-24A14 14 0 0 0 10 18c0 10.8 14 24 14 24Z"/><circle cx="24" cy="18" r="5"/></svg>
+        </div>
+      </div>
+      <form id="live-form" method="post" action="{{ url_for('live_predict') }}">
+        <label class="sr-only" for="city_search">City, town, or village in India</label>
+        <div class="search-row">
+          <span class="search-symbol" aria-hidden="true">&#9906;</span>
+          <input id="city_search" name="city_search" type="text" placeholder="Search a city, town, or village in India" autocomplete="address-level2">
+          <button id="live-button" class="button button-search" type="submit">Search locations <span aria-hidden="true">&#8594;</span></button>
+        </div>
+        <details class="coordinate-entry">
+          <summary>Use latitude and longitude instead</summary>
+          <p class="coordinate-help">Enter decimal degrees. Latitude: -90 to 90. Longitude: -180 to 180.</p>
+          <label class="coordinate-label" for="manual_location_name">Location label <span>optional</span></label>
+          <input id="manual_location_name" class="coordinate-name" name="manual_location_name" type="text" placeholder="e.g. My village">
+          <div class="coordinate-grid">
+            <div><label for="latitude">Latitude</label><input id="latitude" name="latitude" type="number" min="-90" max="90" step="any" placeholder="16.3067"></div>
+            <div><label for="longitude">Longitude</label><input id="longitude" name="longitude" type="number" min="-180" max="180" step="any" placeholder="80.4365"></div>
+          </div>
+          <button class="button button-coordinate" type="submit">Fetch using coordinates <span aria-hidden="true">&#8594;</span></button>
+        </details>
+        <p id="loading-message" class="loading-message" role="status" aria-live="polite"></p>
+      </form>
+      <div class="source-line"><span>Powered by</span><strong>Open-Meteo</strong><span class="source-separator">?</span><strong>CAMS</strong></div>
+    </section>
+
+    <section class="manual-card" id="manual-entry">
+      <div class="section-heading">
+        <div><p class="section-overline">MANUAL INPUT</p><h2>Build an estimate from measurements</h2></div>
+        <span class="manual-step">01 <span>/</span> 02</span>
+      </div>
+      <p class="section-copy">Enter the pollutant readings and choose a city. All values are required for this form.</p>
+      <form method="post" action="{{ url_for('home') }}" class="manual-form">
+        <div class="city-field">
+          <label for="City">City</label>
+          <select id="City" name="City" required>
+            <option value="" disabled selected>Select a training city</option>
+            {% for city in ["Ahmedabad", "Aizawl", "Amaravati", "Amritsar", "Bengaluru", "Bhopal", "Brajrajnagar", "Chandigarh", "Chennai", "Coimbatore", "Delhi", "Ernakulam", "Gurugram", "Guwahati", "Hyderabad", "Jaipur", "Jorapokhar", "Kochi", "Kolkata", "Lucknow", "Mumbai", "Patna", "Shillong", "Talcher", "Thiruvananthapuram", "Visakhapatnam"] %}
+              <option value="{{ city }}">{{ city }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field-grid">
+          {% for pollutant in pollutants %}
+          <div class="field">
+            <label for="{{ pollutant }}">{{ pollutant }}</label>
+            <div class="input-wrap"><input id="{{ pollutant }}" name="{{ pollutant }}" type="number" min="0" step="any" placeholder="0.00" required></div>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="manual-submit-row">
+          <p>Use the same measurement units as the training data.</p>
+          <button class="button button-primary" type="submit">Estimate AQI <span aria-hidden="true">&#8594;</span></button>
+        </div>
+      </form>
+    </section>
+
+    <footer class="site-footer">
+      <span>Airwise ? AQI prediction demonstration</span>
+      <span>Air-quality source: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> ? CAMS</span>
+    </footer>
+  </main>
+  <script>
+    const liveForm = document.getElementById('live-form');
+    const locationButton = document.getElementById('use-current-location');
+    const locationMessage = document.getElementById('geolocation-message');
+    const latitudeInput = document.getElementById('latitude');
+    const longitudeInput = document.getElementById('longitude');
+    const locationLabelInput = document.getElementById('manual_location_name');
+
+    locationButton.addEventListener('click', function () {
+      console.info('[AQI Monitor] Use My Current Location button clicked.');
+      if (!('geolocation' in navigator)) {
+        console.error('[AQI Monitor] Geolocation API is unavailable.', {
+          secureContext: window.isSecureContext,
+          origin: window.location.origin
+        });
+        locationMessage.textContent = window.isSecureContext
+          ? 'Location detection is unavailable in this browser. Search for a place or enter coordinates below.'
+          : 'Browser location requires a secure connection (HTTPS or localhost). Search for a place or enter coordinates below.';
+        locationMessage.dataset.state = 'error';
+        return;
+      }
+
+      locationButton.disabled = true;
+      locationMessage.textContent = 'Requesting your location…';
+      locationMessage.dataset.state = 'loading';
+      try {
+        // Keep this call directly inside the click handler so browsers recognize
+        // the user's gesture when deciding whether to show the permission prompt.
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            console.info('[AQI Monitor] Geolocation succeeded.', {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracyMeters: position.coords.accuracy
+            });
+            latitudeInput.value = position.coords.latitude;
+            longitudeInput.value = position.coords.longitude;
+            locationLabelInput.value = 'Current location';
+            document.querySelector('.coordinate-entry').open = true;
+            locationMessage.textContent = `Location found (${position.coords.latitude.toFixed(5)}, ${position.coords.longitude.toFixed(5)}). Fetching air quality…`;
+            liveForm.requestSubmit();
+          },
+          function (error) {
+            console.error('[AQI Monitor] Geolocation failed.', {
+              code: error.code,
+              name: error.name,
+              message: error.message,
+              secureContext: window.isSecureContext,
+              origin: window.location.origin
+            });
+            const messages = {
+              1: 'Location permission was denied. You can search for a place or enter coordinates instead.',
+              2: 'Your location is unavailable right now. Please search for a place or enter coordinates.',
+              3: 'The location request timed out. Please try again or use the manual location options.'
+            };
+            locationMessage.textContent = messages[error.code] || 'Location detection failed. Search for a place or enter coordinates instead.';
+            locationMessage.dataset.state = 'error';
+            locationButton.disabled = false;
+          },
+          { enableHighAccuracy: false, timeout: 20000, maximumAge: 300000 }
+        );
+      } catch (error) {
+        console.error('[AQI Monitor] Geolocation could not be started.', error);
+        locationMessage.textContent = window.isSecureContext
+          ? 'Location detection could not start. Search for a place or enter coordinates instead.'
+          : 'Browser location requires a secure connection (HTTPS or localhost). Search for a place or enter coordinates below.';
+        locationMessage.dataset.state = 'error';
+        locationButton.disabled = false;
+      }
+    });
+
+    liveForm.addEventListener('submit', function (event) {
+      const submitter = event.submitter;
+      if (submitter) submitter.disabled = true;
+      document.getElementById('loading-message').textContent = 'Searching for the location or fetching current conditions...';
+    });
+  </script>
+</body>
+</html>

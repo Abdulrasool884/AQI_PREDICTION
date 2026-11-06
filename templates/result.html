@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AQI Estimate | Airwise</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <main class="site-layout result-layout">
+    <header class="site-header">
+      <a class="brand" href="{{ url_for('home') }}" aria-label="Airwise home">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span><strong>Airwise</strong><small>INDIA AIR QUALITY</small></span>
+      </a>
+      <span class="project-tag"><span class="status-dot"></span> AQI estimate</span>
+    </header>
+
+    <section class="result-card">
+      <div class="result-topline">
+        <div>
+          <p class="section-overline">{% if mode == 'live' %}LIVE MODEL ESTIMATE{% else %}MANUAL MODEL ESTIMATE{% endif %}</p>
+          <h1>Experimental ML-estimated AQI</h1>
+          <p class="result-location">{{ location_label }}</p>
+        </div>
+        <a class="button button-outline back-button" href="{{ url_for('home') }}">&#8592; New estimate</a>
+      </div>
+
+      <div class="result-overview">
+        <div class="result-gauge-column">
+          {% set gauge_value = [prediction, 500]|min %}
+          <div class="aqi-gauge category-{{ category|lower|replace(' ', '-') }}" style="--aqi-angle: {{ (gauge_value / 500 * 360)|round(1) }}deg;" role="img" aria-label="AQI estimate {{ '%.1f'|format(prediction) }}, {{ category }} category">
+            <div class="gauge-face">
+              <span class="gauge-caption">ESTIMATED AQI</span>
+              <strong class="aqi-number">{{ "%.1f"|format(prediction) }}</strong>
+              <span class="gauge-scale">India AQI scale</span>
+            </div>
+          </div>
+          <span class="category category-{{ category|lower|replace(' ', '-') }}">{{ category }}</span>
+        </div>
+
+        <div class="result-context">
+          <p class="context-label">AIR QUALITY SUMMARY</p>
+          <h2>{{ city }}</h2>
+          {% if mode == 'live' %}
+          <p class="context-copy">Current model-based pollutant conditions for the selected location.</p>
+          <div class="location-meta">
+            <div><span>Coordinates</span><strong>{{ "%.5f"|format(latitude) }}, {{ "%.5f"|format(longitude) }}</strong></div>
+            <div><span>Data timestamp</span><strong>{{ timestamp }}</strong></div>
+          </div>
+          {% else %}
+          <p class="context-copy">This estimate uses the pollutant measurements entered in the manual form.</p>
+          {% endif %}
+          <div class="category-summary category-{{ category|lower|replace(' ', '-') }}">
+            <span>India AQI category</span><strong>{{ category }}</strong>
+          </div>
+        </div>
+      </div>
+
+      {% if mode == 'live' %}
+      <section class="pollutant-section">
+        <div class="section-heading pollutant-heading">
+          <div><p class="section-overline">MEASUREMENTS</p><h2>Pollutant concentrations</h2></div>
+          <span class="api-badge"><span class="status-dot"></span> Open-Meteo data</span>
+        </div>
+        <p class="section-copy">Available from API: {{ api_received|join(", ") if api_received else "None" }}. Concentrations are shown in ug/m3; CO is converted to mg/m3 for model input.</p>
+        <dl class="pollutant-list">
+          {% for label, key, symbol in [("PM2.5", "PM2.5", "PM"), ("PM10", "PM10", "PM"), ("NO2", "NO2", "NO2"), ("SO2", "SO2", "SO2"), ("CO", "CO", "CO"), ("O3", "O3", "O3")] %}
+          <div class="pollutant-card">
+            <dt><span class="pollutant-symbol">{{ symbol }}</span>{{ label }}</dt>
+            <dd>{% if api_pollutants[key] is not none %}{{ "%.2f"|format(api_pollutants[key]) }}<small>ug/m3</small>{% else %}<span class="unavailable">Unavailable</span>{% endif %}</dd>
+          </div>
+          {% endfor %}
+        </dl>
+      </section>
+      <p class="attribution">Air-quality data from <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> ? CAMS data provider: <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener">Copernicus Atmosphere Monitoring Service</a>.</p>
+      {% endif %}
+
+      <div class="result-footer">
+        <p class="aqi-bands">India AQI bands: Good 0-50 ? Satisfactory 51-100 ? Moderate 101-200 ? Poor 201-300 ? Very Poor 301-400 ? Severe 401-500.</p>
+        <p class="disclaimer">AQI shown is an experimental machine-learning estimate and may differ from official monitoring sources.</p>
+      </div>
+    </section>
+    <footer class="site-footer"><span>Airwise ? AQI prediction demonstration</span><a href="{{ url_for('home') }}">Return to dashboard</a></footer>
+  </main>
+</body>
+</html>
